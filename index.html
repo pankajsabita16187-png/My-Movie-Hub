@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>My Movie Hub</title>
+
+        <!-- Tailwind CDN (play with themes client-side) -->
+        <script src="https://cdn.tailwindcss.com"></script>
+
+        <!-- Inter font -->
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+        <style>
+            :root {
+                --bg: #0b1220;
+                --card: #0f1724;
+                --muted: #9ca3af;
+                --accent-from: #7c3aed;
+                /* purple */
+                --accent-to: #06b6d4;
+                /* teal */
+            }
+
+            [data-theme="light"] {
+                --bg: #f8fafc;
+                --card: #ffffff;
+                --muted: #4b5563;
+            }
+
+            html,
+            body {
+                height: 100%;
+            }
+
+            body {
+                font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+                background: linear-gradient(180deg, rgba(2, 6, 23, 1) 0%, rgba(13, 18, 26, 0.95) 100%);
+                background-color: var(--bg);
+                color: white;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+            }
+
+            /* Neon gradient accent */
+            .neon-accent {
+                background: linear-gradient(90deg, var(--accent-from), var(--accent-to));
+                background-clip: text;
+                -webkit-background-clip: text;
+                color: transparent;
+            }
+
+            /* Smooth card glow */
+            .card-glow {
+                box-shadow: 0 6px 18px rgba(16, 24, 40, 0.6);
+            }
+
+            .card-hover-glow:hover {
+                box-shadow: 0 10px 40px rgba(99, 102, 241, 0.12), 0 6px 18px rgba(2, 6, 23, 0.6);
+                transform: translateY(-6px) scale(1.01);
+            }
+
+            /* Skeleton */
+            .skeleton {
+                background: linear-gradient(90deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.05) 50%, rgba(255, 255, 255, 0.02) 100%);
+                animation: shimmer 1.2s infinite;
+            }
+
+            @keyframes shimmer {
+                0% {
+                    background-position: -200px 0;
+                }
+
+                100% {
+                    background-position: 200px 0;
+                }
+            }
+
+            /* Custom scrollbars for dark theme */
+            ::-webkit-scrollbar {
+                width: 10px;
+                height: 10px;
+            }
+
+            ::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.06);
+                border-radius: 999px;
+            }
+
+            ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            /* Modal overlay fade */
+            .fade-in {
+                animation: fadeIn .16s ease-out both;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(6px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* Truncate multi-line description */
+            .line-clamp-4 {
+                display: -webkit-box;
+                -webkit-line-clamp: 4;
+                line-clamp: 4;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            /* Focus ring override for high-contrast */
+            .focus-ring:focus {
+                outline: 2px solid rgba(99, 102, 241, 0.45);
+                outline-offset: 2px;
+            }
+
+            /* small responsive adjustments */
+            @media (max-width: 640px) {
+                .header-grid {
+                    gap: 0.5rem;
+                }
+
+                #search-input {
+                    width: 100% !important;
+                }
+            }
+        </style>
+    </head>
+
+    <body class="antialiased" data-theme="dark">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 backdrop-blur-lg bg-opacity-30" aria-label="Main header">
+            <nav
+                class="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-center gap-3 header-grid">
+                <div class="flex items-center gap-4">
+                    <button id="theme-toggle" class="p-2 rounded-lg focus-ring" title="Toggle light / dark theme"
+                        aria-pressed="false">
+                        <!-- icon toggles via JS -->
+                        <svg id="sun-icon" class="hidden h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 6.636L5.636 5.222M18.364 5.636l-1.414 1.414M7.05 17.364l-1.414 1.414" />
+                            <circle cx="12" cy="12" r="3" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <svg id="moon-icon" class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                        </svg>
+                    </button>
+
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl sm:text-3xl font-extrabold neon-accent select-none">My Movie Hub</h1>
+                    </div>
+                </div>
+
+                <!-- Search + Filters -->
+                <div class="w-full sm:w-auto flex items-center gap-3">
+                    <div class="relative w-full sm:w-72">
+                        <label for="search-input" class="sr-only">Search</label>
+                        <input id="search-input" type="search" placeholder="Search movies, series, tags..."
+                            aria-label="Search media"
+                            class="w-full bg-gray-800/60 placeholder-gray-400 text-white rounded-lg py-2 pl-10 pr-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition focus:outline-none">
+                        <svg class="w-5 h-5 text-gray-400 absolute left-3 top-2.5 pointer-events-none"
+                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-4.35-4.35M10 18a8 8 0 100-16 8 8 0 000 16z" />
+                        </svg>
+                    </div>
+
+                    <div class="flex gap-1 bg-gray-800/50 p-1 rounded-lg card-glow">
+                        <button id="filter-all"
+                            class="filter-btn px-3 py-1 rounded-md text-sm bg-blue-600 text-white">All</button>
+                        <button id="filter-movies"
+                            class="filter-btn px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-700">Movies</button>
+                        <button id="filter-series"
+                            class="filter-btn px-3 py-1 rounded-md text-sm text-gray-300 hover:bg-gray-700">Series</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <button id="admin-button"
+                        class="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-700 hover:to-cyan-600 text-white px-4 py-2 rounded-lg font-semibold shadow-md focus-ring"
+                        aria-haspopup="dialog">Admin Upload</button>
+                </div>
+            </nav>
+        </header>
+
+        <!-- Main -->
+        <main class="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Loading / skeleton container -->
+            <div id="loading-movies" class="text-center text-gray-400 py-12">
+                <div class="mx-auto w-48 h-48 skeleton rounded-lg"></div>
+                <p class="mt-4 text-sm text-gray-300">Loading media...</p>
+            </div>
+
+            <!-- Grid -->
+            <div id="movie-grid"
+                class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+                aria-live="polite" role="list">
+                <!-- JS will inject cards here -->
+            </div>
+
+            <p id="no-results" class="text-gray-400 col-span-full text-center text-xl hidden pt-10">No results found.
+            </p>
+        </main>
+
+        <!-- Admin Modal (improved) -->
+        <div id="admin-modal" class="fixed inset-0 z-50 hidden items-start sm:items-center justify-center p-4">
+            <div id="admin-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+            <div role="dialog" aria-modal="true" aria-labelledby="admin-title"
+                class="relative w-full max-w-lg mt-10 sm:mt-0 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 shadow-2xl ring-1 ring-white/5 fade-in">
+                <!-- close -->
+                <button id="close-modal-button"
+                    class="absolute top-4 right-4 p-2 rounded-md text-gray-300 hover:text-white focus-ring"
+                    aria-label="Close admin modal">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div id="password-section">
+                    <h3 id="admin-title" class="text-2xl font-bold neon-accent">Admin Access</h3>
+                    <p class="text-sm text-gray-400 mt-1 mb-4">Enter the password to upload media.</p>
+                    <label for="admin-password" class="sr-only">Admin Password</label>
+                    <input id="admin-password" type="password" placeholder="••••••••"
+                        class="w-full bg-gray-800 p-2 rounded-md border border-transparent focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <p id="password-error" class="text-sm text-red-400 mt-2 hidden" role="alert"></p>
+                    <div class="mt-4 grid grid-cols-1 gap-2">
+                        <button id="login-button"
+                            class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded-md font-semibold text-white focus-ring">Login</button>
+                        <button id="cancel-login"
+                            class="w-full bg-transparent border border-gray-700 text-gray-300 py-2 rounded-md">Cancel</button>
+                    </div>
+                </div>
+
+                <div id="upload-section" class="hidden">
+                    <h3 class="text-2xl font-bold neon-accent">Upload New Media</h3>
+
+                    <div class="flex gap-3 mt-3 items-center">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" id="type-movie" name="media-type" value="movie" checked
+                                class="focus-ring">
+                            <span class="text-sm">Movie</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" id="type-series" name="media-type" value="series" class="focus-ring">
+                            <span class="text-sm">Series</span>
+                        </label>
+                    </div>
+
+                    <form id="upload-form" class="mt-4 space-y-3">
+                        <div>
+                            <label for="media-title" class="sr-only">Title</label>
+                            <input id="media-title" required placeholder="Title"
+                                class="w-full bg-gray-800 p-2 rounded-md focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <label for="media-poster" class="sr-only">Poster</label>
+                            <input id="media-poster" type="file" accept="image/*" required
+                                class="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700">
+                        </div>
+
+                        <div>
+                            <label for="media-description" class="sr-only">Description</label>
+                            <textarea id="media-description" rows="3" required placeholder="Short description..."
+                                class="w-full bg-gray-800 p-2 rounded-md focus:ring-2 focus:ring-indigo-500"></textarea>
+                        </div>
+
+                        <div id="series-fields" class="hidden">
+                            <h4 class="text-lg font-semibold mt-2">Episodes</h4>
+                            <div id="episodes-list" class="space-y-3 max-h-40 overflow-y-auto pr-2"></div>
+                            <button type="button" id="add-episode-btn"
+                                class="w-full bg-gray-700 hover:bg-gray-600 py-2 rounded-md">+ Add Episode</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-2">
+                            <button type="submit" id="upload-button"
+                                class="bg-emerald-500 hover:bg-emerald-600 py-2 rounded-md text-white font-semibold">Add
+                                Media</button>
+                            <button type="button" id="logout-admin"
+                                class="bg-gray-700 hover:bg-gray-600 py-2 rounded-md text-gray-200">Logout</button>
+                        </div>
+                        <p id="upload-status" class="text-sm text-center mt-1"></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Details Modal -->
+        <div id="details-modal" class="fixed inset-0 z-50 hidden items-start sm:items-center justify-center p-4">
+            <div id="details-overlay" class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+
+            <div role="dialog" aria-modal="true" aria-labelledby="details-title"
+                class="relative w-full max-w-3xl mt-10 sm:mt-0 bg-gray-900 rounded-2xl p-5 shadow-2xl fade-in">
+                <button id="close-details-modal-button"
+                    class="absolute top-4 right-4 p-2 rounded-md text-gray-300 hover:text-white focus-ring"
+                    aria-label="Close details">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
+                <div class="flex flex-col md:flex-row gap-4">
+                    <img id="details-poster" src="" alt="Poster"
+                        class="w-full md:w-1/3 h-auto object-cover rounded-lg shadow-lg skeleton">
+                    <div class="w-full md:w-2/3">
+                        <h2 id="details-title" class="text-2xl font-bold neon-accent"></h2>
+                        <p id="details-description" class="text-gray-300 mt-2"></p>
+
+                        <div id="details-episodes-container" class="hidden mt-4">
+                            <h3 class="text-lg font-semibold mb-2">Episodes</h3>
+                            <div id="details-episodes-list" class="space-y-2 max-h-56 overflow-y-auto pr-2"></div>
+                        </div>
+
+                        <div class="border-t border-gray-700 pt-4 mt-4">
+                            <button id="gemini-analyze-btn"
+                                class="bg-gradient-to-r from-purple-500 to-blue-500 py-2 px-4 rounded-md text-white font-semibold flex items-center gap-2 disabled:opacity-60">
+                                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 2a9 9 0 100 18 9 9 0 000-18z" />
+                                </svg>
+                                ✨ Get AI Insights
+                            </button>
+
+                            <div id="gemini-loading" class="text-center text-gray-400 py-4 hidden">
+                                <div class="mx-auto w-8 h-8 border-4 border-t-transparent rounded-full animate-spin">
+                                </div>
+                                <p class="mt-2 text-sm">Analyzing...</p>
+                            </div>
+
+                            <div id="gemini-results"
+                                class="hidden bg-gray-800 p-3 rounded-md mt-3 border border-gray-700 text-gray-100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Firebase + App JS -->
+        <script type="module">
+            // -------------------------
+            // Firebase imports (same versions used, safe defaults)
+            // -------------------------
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+            import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+            import { getFirestore, collection, addDoc, onSnapshot, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+            import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+            // -------------------------
+            // Config (the page expects __firebase_config and __app_id in the environment)
+            // -------------------------
+            const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            // -------------------------
+            // Initialize Firebase safely
+            // -------------------------
+            let app, auth, db, storage;
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                storage = getStorage(app);
+                setLogLevel('Debug');
+            } catch (e) {
+                console.error("Firebase init error:", e);
+                document.getElementById('loading-movies').textContent = "Error connecting to storage/database.";
+            }
+
+            // -------------------------
+            // Elements & state
+            // -------------------------
+            const adminButton = document.getElementById('admin-button');
+            const adminModal = document.getElementById('admin-modal');
+            const adminOverlay = document.getElementById('admin-overlay');
+            const closeModalButton = document.getElementById('close-modal-button');
+            const passwordSection = document.getElementById('password-section');
+            const adminPasswordInput = document.getElementById('admin-password');
+            const loginButton = document.getElementById('login-button');
+            const passwordError = document.getElementById('password-error');
+            const uploadSection = document.getElementById('upload-section');
+            const uploadForm = document.getElementById('upload-form');
+            const mediaTitleInput = document.getElementById('media-title');
+            const mediaPosterInput = document.getElementById('media-poster');
+            const mediaDescriptionInput = document.getElementById('media-description');
+            const uploadButton = document.getElementById('upload-button');
+            const uploadStatus = document.getElementById('upload-status');
+            const radioMovie = document.getElementById('type-movie');
+            const radioSeries = document.getElementById('type-series');
+            const seriesFields = document.getElementById('series-fields');
+            const episodesList = document.getElementById('episodes-list');
+            const addEpisodeBtn = document.getElementById('add-episode-btn');
+
+            const movieGrid = document.getElementById('movie-grid');
+            const loadingMovies = document.getElementById('loading-movies');
+            const noResults = document.getElementById('no-results');
+
+            const searchInput = document.getElementById('search-input');
+            const filterBtnAll = document.getElementById('filter-all');
+            const filterBtnMovies = document.getElementById('filter-movies');
+            const filterBtnSeries = document.getElementById('filter-series');
+
+            const detailsModal = document.getElementById('details-modal');
+            const closeDetailsModalButton = document.getElementById('close-details-modal-button');
+            const detailsPoster = document.getElementById('details-poster');
+            const detailsTitle = document.getElementById('details-title');
+            const detailsDescription = document.getElementById('details-description');
+            const detailsEpisodesContainer = document.getElementById('details-episodes-container');
+            const detailsEpisodesList = document.getElementById('details-episodes-list');
+
+            const geminiAnalyzeBtn = document.getElementById('gemini-analyze-btn');
+            const geminiLoading = document.getElementById('gemini-loading');
+            const geminiResults = document.getElementById('gemini-results');
+
+            const themeToggle = document.getElementById('theme-toggle');
+            const sunIcon = document.getElementById('sun-icon');
+            const moonIcon = document.getElementById('moon-icon');
+
+            let mediaCollectionRef;
+            let allMedia = [];
+            let currentFilter = 'all'; // all | movies | series
+            let userId = null;
+
+            // -------------------------
+            // Utility: debounce
+            // -------------------------
+            function debounce(fn, wait = 220) {
+                let t;
+                return (...args) => {
+                    clearTimeout(t);
+                    t = setTimeout(() => fn(...args), wait);
+                };
+            }
+
+            // -------------------------
+            // Theme handling (persist)
+            // -------------------------
+            function applyTheme(theme) {
+                document.body.setAttribute('data-theme', theme);
+                if (theme === 'light') {
+                    sunIcon.classList.remove('hidden');
+                    moonIcon.classList.add('hidden');
+                    themeToggle.setAttribute('aria-pressed', 'true');
+                } else {
+                    sunIcon.classList.add('hidden');
+                    moonIcon.classList.remove('hidden');
+                    themeToggle.setAttribute('aria-pressed', 'false');
+                }
+            }
+
+            (function initTheme() {
+                const saved = localStorage.getItem('mmh_theme') || 'dark';
+                applyTheme(saved);
+            })();
+
+            themeToggle.addEventListener('click', () => {
+                const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                localStorage.setItem('mmh_theme', next);
+                applyTheme(next);
+            });
+
+            // -------------------------
+            // Modal helpers (simple focus trap)
+            // -------------------------
+            function openModal(modal) {
+                modal.classList.remove('hidden');
+                modal.querySelector('input,button,textarea,select')?.focus();
+                document.documentElement.style.overflow = 'hidden';
+            }
+            function closeModal(modal) {
+                modal.classList.add('hidden');
+                document.documentElement.style.overflow = '';
+            }
+
+            // Admin modal open/close
+            adminButton.addEventListener('click', () => openModal(adminModal));
+            closeModalButton.addEventListener('click', () => { resetModal(); closeModal(adminModal); });
+            document.getElementById('cancel-login').addEventListener('click', () => { resetModal(); closeModal(adminModal); });
+
+            // Details modal
+            closeDetailsModalButton.addEventListener('click', () => closeModal(detailsModal));
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal(adminModal);
+                    closeModal(detailsModal);
+                }
+            });
+
+            // -------------------------
+            // Modal reset
+            // -------------------------
+            function resetModal() {
+                passwordSection.classList.remove('hidden');
+                uploadSection.classList.add('hidden');
+                adminPasswordInput.value = '';
+                passwordError.classList.add('hidden');
+                uploadStatus.textContent = '';
+                uploadForm.reset();
+                episodesList.innerHTML = '';
+                seriesFields.classList.add('hidden');
+                radioMovie.checked = true;
+            }
+
+            // -------------------------
+            // Admin auth (client-side simple password)
+            // -------------------------
+            // NOTE: This is just client-side gatekeeping. For production, replace with secure auth.
+            const ADMIN_PASSWORD = "123ajitesh";
+
+            loginButton.addEventListener('click', () => {
+                if (adminPasswordInput.value === ADMIN_PASSWORD) {
+                    passwordSection.classList.add('hidden');
+                    uploadSection.classList.remove('hidden');
+                    if (!episodesList.children.length) addEpisodeField();
+                } else {
+                    passwordError.textContent = "Incorrect password. Please try again.";
+                    passwordError.classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('logout-admin').addEventListener('click', () => {
+                resetModal();
+                closeModal(adminModal);
+            });
+
+            // -------------------------
+            // Series form handling
+            // -------------------------
+            radioMovie.addEventListener('change', () => seriesFields.classList.add('hidden'));
+            radioSeries.addEventListener('change', () => { seriesFields.classList.remove('hidden'); if (!episodesList.children.length) addEpisodeField(); });
+
+            addEpisodeBtn.addEventListener('click', addEpisodeField);
+            function addEpisodeField() {
+                const idx = episodesList.children.length + 1;
+                const wrapper = document.createElement('div');
+                wrapper.className = 'p-2 border border-gray-700 rounded-md bg-gray-800/30';
+                wrapper.innerHTML = `
+                <label class="block text-sm font-medium mb-1">Episode ${idx} Title</label>
+                <input class="episode-title w-full p-2 rounded-md bg-gray-900/60 focus:ring-2 focus:ring-indigo-500" required placeholder="Episode ${idx} title">
+                <label class="block text-sm font-medium mt-2 mb-1">Episode ${idx} Description</label>
+                <textarea class="episode-description w-full p-2 rounded-md bg-gray-900/60" rows="2" placeholder="Episode description"></textarea>
+            `;
+                episodesList.appendChild(wrapper);
+            }
+
+            // -------------------------
+            // Media Card template + lazy loading
+            // -------------------------
+            function createMediaCard(media) {
+                // media is { id, data }
+                const { title, posterUrl, description = '', type = 'movie' } = media.data || {};
+                const placeholder = `https://placehold.co/400x600/0b1220/9ca3af?text=${encodeURIComponent(title || 'Untitled')}`;
+
+                const card = document.createElement('article');
+                card.className = 'bg-gray-800/70 rounded-lg overflow-hidden card-glow card-hover-glow cursor-pointer transform transition-all duration-300 flex flex-col';
+                card.setAttribute('role', 'listitem');
+                card.innerHTML = `
+                <div class="relative">
+                    <img data-src="${posterUrl || placeholder}" src="${placeholder}" alt="${title} poster" loading="lazy"
+                         class="w-full h-80 object-cover block transition-opacity duration-500 skeleton" />
+                    ${type === 'series' ? `<span class="absolute top-3 left-3 bg-blue-600 text-xs font-semibold px-2 py-1 rounded-md">SERIES</span>` : ''}
+                </div>
+                <div class="p-3 flex-1 flex flex-col">
+                    <h3 class="text-lg font-semibold mb-1 truncate">${title}</h3>
+                    <p class="text-sm text-gray-300 mb-3 line-clamp-4">${description || 'No description provided.'}</p>
+                    <div class="mt-auto flex items-center justify-between gap-2">
+                        <button class="open-details bg-indigo-600 hover:bg-indigo-700 py-1 px-3 rounded-md text-sm font-medium text-white focus-ring">Details</button>
+                        <small class="text-xs text-gray-400">${new Date(media.data.uploadedAt?.toDate ? media.data.uploadedAt.toDate() : media.data.uploadedAt || Date.now()).toLocaleDateString()}</small>
+                    </div>
+                </div>
+            `;
+
+                // click to open details modal
+                card.querySelector('.open-details').addEventListener('click', () => showDetailsModal(media.data));
+                // lazy load image - will be handled by observer
+                return card;
+            }
+
+            // -------------------------
+            // Lazy image loader with IntersectionObserver
+            // -------------------------
+            const io = new IntersectionObserver((entries) => {
+                for (const e of entries) {
+                    if (e.isIntersecting) {
+                        const img = e.target;
+                        const src = img.getAttribute('data-src');
+                        if (src && img.src !== src) {
+                            img.src = src;
+                            img.onload = () => img.classList.remove('skeleton');
+                        }
+                        io.unobserve(img);
+                    }
+                }
+            }, { rootMargin: '200px 0px' });
+
+            // -------------------------
+            // Create skeleton placeholders while loading
+            // -------------------------
+            function renderSkeletons(count = 8) {
+                movieGrid.innerHTML = '';
+                for (let i = 0; i < count; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'bg-gray-800 rounded-lg overflow-hidden';
+                    s.innerHTML = `
+                    <div class="w-full h-80 skeleton"></div>
+                    <div class="p-3 space-y-2">
+                        <div class="h-4 w-3/4 skeleton rounded"></div>
+                        <div class="h-3 w-full skeleton rounded"></div>
+                        <div class="h-3 w-5/6 skeleton rounded"></div>
+                    </div>
+                `;
+                    movieGrid.appendChild(s);
+                }
+            }
+
+            // -------------------------
+            // Load media - Firestore listener
+            // -------------------------
+            function loadMedia() {
+                if (!db) {
+                    loadingMovies.textContent = "Database not initialized";
+                    return;
+                }
+
+                renderSkeletons(9);
+                const mediaPublicPath = `artifacts/${appId}/public/data/media`;
+                mediaCollectionRef = collection(db, mediaPublicPath);
+
+                try {
+                    onSnapshot(mediaCollectionRef, (snapshot) => {
+                        loadingMovies.style.display = 'none';
+                        allMedia = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+                        // ensure consistent shape & default ordering (newest first if uploadedAt exists)
+                        allMedia.sort((a, b) => {
+                            const ta = a.data.uploadedAt?.toDate ? a.data.uploadedAt.toDate().valueOf() : (a.data.uploadedAt || 0);
+                            const tb = b.data.uploadedAt?.toDate ? b.data.uploadedAt.toDate().valueOf() : (b.data.uploadedAt || 0);
+                            return tb - ta;
+                        });
+                        updateDisplay();
+                    }, (err) => {
+                        console.error("Snapshot error:", err);
+                        loadingMovies.textContent = "Error fetching media.";
+                    });
+                } catch (err) {
+                    console.error("Failed to setup snapshot:", err);
+                    loadingMovies.textContent = "Failed to listen for updates.";
+                }
+            }
+
+            // -------------------------
+            // Update display: search + filters
+            // -------------------------
+            function updateDisplay() {
+                const searchTerm = (searchInput.value || '').trim().toLowerCase();
+                let filtered = allMedia;
+
+                if (currentFilter === 'movies') filtered = filtered.filter(m => (m.data.type || 'movie') === 'movie');
+                if (currentFilter === 'series') filtered = filtered.filter(m => (m.data.type || 'movie') === 'series');
+
+                if (searchTerm) {
+                    filtered = filtered.filter(m => {
+                        const title = (m.data.title || '').toLowerCase();
+                        const desc = (m.data.description || '').toLowerCase();
+                        return title.includes(searchTerm) || desc.includes(searchTerm);
+                    });
+                }
+
+                movieGrid.innerHTML = '';
+                if (filtered.length === 0) {
+                    noResults.classList.remove('hidden');
+                } else {
+                    noResults.classList.add('hidden');
+                    const fragment = document.createDocumentFragment();
+                    filtered.forEach(item => {
+                        const card = createMediaCard(item);
+                        fragment.appendChild(card);
+                    });
+                    movieGrid.appendChild(fragment);
+
+                    // observe images for lazy load
+                    movieGrid.querySelectorAll('img').forEach(img => {
+                        io.observe(img);
+                    });
+                }
+            }
+
+            // debounce search input
+            searchInput.addEventListener('input', debounce(updateDisplay, 200));
+
+            // filter button logic & accessible states
+            [filterBtnAll, filterBtnMovies, filterBtnSeries].forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('bg-blue-600', 'text-white'));
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    currentFilter = btn.id.replace('filter-', '');
+                    updateDisplay();
+                });
+            });
+
+            // -------------------------
+            // Show Details Modal
+            // -------------------------
+            function showDetailsModal(media) {
+                detailsPoster.classList.add('skeleton');
+                const placeholder = `https://placehold.co/400x600/0b1220/9ca3af?text=${encodeURIComponent(media.title || 'Untitled')}`;
+                detailsPoster.src = media.posterUrl || placeholder;
+                detailsPoster.onerror = () => { detailsPoster.src = placeholder; detailsPoster.classList.remove('skeleton'); };
+                detailsTitle.textContent = media.title || 'Untitled';
+                detailsDescription.textContent = media.description || 'No description provided.';
+                if (media.type === 'series' && Array.isArray(media.episodes) && media.episodes.length) {
+                    detailsEpisodesList.innerHTML = '';
+                    media.episodes.forEach((ep, idx) => {
+                        const el = document.createElement('div');
+                        el.className = 'p-2 bg-gray-800/40 rounded-md';
+                        el.innerHTML = `<strong>${idx + 1}. ${ep.title}</strong><p class="text-sm text-gray-300 mt-1">${ep.description || ''}</p>`;
+                        detailsEpisodesList.appendChild(el);
+                    });
+                    detailsEpisodesContainer.classList.remove('hidden');
+                } else {
+                    detailsEpisodesContainer.classList.add('hidden');
+                    detailsEpisodesList.innerHTML = '';
+                }
+
+                geminiResults.innerHTML = '';
+                geminiResults.classList.add('hidden');
+                geminiLoading.classList.add('hidden');
+                geminiAnalyzeBtn.disabled = false;
+
+                openModal(detailsModal);
+            }
+
+            // -------------------------
+            // Upload Media (image -> storage, metadata -> firestore)
+            // -------------------------
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!mediaCollectionRef || !storage) {
+                    uploadStatus.textContent = 'Storage/database not ready.';
+                    uploadStatus.className = 'text-sm text-red-400';
+                    return;
+                }
+
+                const file = mediaPosterInput.files[0];
+                const title = mediaTitleInput.value.trim();
+                const description = mediaDescriptionInput.value.trim();
+                const type = radioSeries.checked ? 'series' : 'movie';
+
+                if (!file || !title) {
+                    uploadStatus.textContent = 'Please provide title and poster image.';
+                    uploadStatus.className = 'text-sm text-red-400';
+                    return;
+                }
+
+                uploadButton.disabled = true;
+                uploadStatus.textContent = 'Uploading image...';
+                uploadStatus.className = 'text-sm text-gray-300';
+
+                try {
+                    const storageRef = ref(storage, `posters/${appId}/${Date.now()}_${file.name}`);
+                    const snap = await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(snap.ref);
+
+                    uploadStatus.textContent = 'Saving metadata...';
+
+                    const mediaData = {
+                        title,
+                        posterUrl: url,
+                        description,
+                        type,
+                        uploadedAt: new Date()
+                    };
+
+                    if (type === 'series') {
+                        mediaData.episodes = [];
+                        const titleNodes = episodesList.querySelectorAll('.episode-title');
+                        const descNodes = episodesList.querySelectorAll('.episode-description');
+                        titleNodes.forEach((tn, idx) => {
+                            if (tn.value.trim()) {
+                                mediaData.episodes.push({ title: tn.value.trim(), description: (descNodes[idx]?.value || '').trim() });
+                            }
+                        });
+                    }
+
+                    await addDoc(mediaCollectionRef, mediaData);
+                    uploadStatus.textContent = 'Media added!';
+                    uploadStatus.className = 'text-sm text-green-400';
+                    setTimeout(() => { resetModal(); closeModal(adminModal); }, 1000);
+                } catch (err) {
+                    console.error('Upload failed', err);
+                    uploadStatus.textContent = 'Failed to add media. Try again.';
+                    uploadStatus.className = 'text-sm text-red-400';
+                } finally {
+                    uploadButton.disabled = false;
+                }
+            });
+
+            // -------------------------
+            // Gemini analysis (same logic; expects API key in env)
+            // -------------------------
+            const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+            async function getGeminiAnalysis(title, description) {
+                const apiKey = ""; // provide via environment if available
+                if (!apiKey) throw new Error('No Gemini API key provided');
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+                const systemPrompt = `You are a friendly film critic. Given a title & description produce 3-4 concise bullet points in HTML <ul><li> format: vibe, themes, audience, quick pitch.`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: `Title: ${title}\nDescription: ${description}` }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] }
+                };
+
+                let retries = 4, delay = 800;
+                for (let i = 0; i < retries; i++) {
+                    try {
+                        const resp = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (!resp.ok) {
+                            if (resp.status >= 400 && resp.status < 500) throw new Error('Client error from Gemini');
+                            throw new Error('Server error');
+                        }
+                        const json = await resp.json();
+                        const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (!text) throw new Error('No content returned');
+                        return text;
+                    } catch (err) {
+                        console.warn('Gemini attempt failed:', err);
+                        if (i === retries - 1) throw err;
+                        await sleep(delay);
+                        delay *= 2;
+                    }
+                }
+            }
+
+            geminiAnalyzeBtn.addEventListener('click', async () => {
+                const title = detailsTitle.textContent;
+                const description = detailsDescription.textContent;
+                geminiAnalyzeBtn.disabled = true;
+                geminiLoading.classList.remove('hidden');
+                geminiResults.classList.add('hidden');
+                geminiResults.innerHTML = '';
+
+                try {
+                    const html = await getGeminiAnalysis(title, description);
+                    geminiResults.innerHTML = html;
+                } catch (err) {
+                    console.error('Gemini error', err);
+                    geminiResults.innerHTML = `<p class="text-red-400">AI insights unavailable.</p>`;
+                } finally {
+                    geminiLoading.classList.add('hidden');
+                    geminiResults.classList.remove('hidden');
+                    geminiAnalyzeBtn.disabled = false;
+                }
+            });
+
+            // -------------------------
+            // Simple auth + start
+            // -------------------------
+            async function setupAuthAndLoad() {
+                if (!auth) {
+                    loadingMovies.textContent = "Auth not available.";
+                    return;
+                }
+                try {
+                    const authToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                    if (authToken) await signInWithCustomToken(auth, authToken);
+                    else await signInAnonymously(auth);
+
+                    userId = auth.currentUser?.uid || null;
+                    loadMedia();
+                } catch (err) {
+                    console.error('Auth error', err);
+                    loadingMovies.textContent = "Authentication failed.";
+                }
+            }
+
+            setupAuthAndLoad();
+
+            // -------------------------
+            // Accessibility small improvements: trap focus inside open modals (simple)
+            // -------------------------
+            document.addEventListener('focusin', (e) => {
+                if (!adminModal.classList.contains('hidden')) {
+                    const allowed = adminModal.contains(e.target);
+                    if (!allowed) {
+                        e.stopPropagation();
+                        adminModal.querySelector('input,button,textarea,select')?.focus();
+                    }
+                }
+                if (!detailsModal.classList.contains('hidden')) {
+                    const allowed = detailsModal.contains(e.target);
+                    if (!allowed) {
+                        e.stopPropagation();
+                        detailsModal.querySelector('button, a, input')?.focus();
+                    }
+                }
+            });
+
+            // Expose small debug for devs (optional)
+            window.__mmh = { updateDisplay, allMedia, reload: loadMedia };
+        </script>
+    </body>
+
+</html>
